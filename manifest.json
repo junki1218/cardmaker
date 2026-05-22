@@ -1,0 +1,18 @@
+{
+  "name": "かーどメーカー",
+  "short_name": "かーどメーカー",
+  "description": "しゃしんとおえかきで、かんたんにカードがつくれるよ！",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fcfaf2",
+  "theme_color": "#ffb347",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
