@@ -14,44 +14,44 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   // 状態管理
   // =========================================================================
-  let currentMode = 'draw'; // 'draw' | 'photo'
-  let penColor   = '#000000';
-  let penWidth   = 20;
-  let isEraser   = false;
+  let currentMode = 'draw'; // 'draw' | 'photo' | 'text'
+  let penColor    = '#000000';
+  let penWidth    = 20;
+  let isEraser    = false;
 
-  // 描画
   let isDrawing = false;
   let lastX = 0, lastY = 0;
 
-  // undo スタック（canvas の DataURL を保持、最大 MAX_UNDO ステップ）
-  const MAX_UNDO  = 20;
+  // Undo スタック（canvas + 写真 + テキストの統合スナップショット）
+  const MAX_UNDO  = 10;
   const undoStack = [];
 
-  // 画像操作
-  let selectedImage    = null;
-  let activeDragImage  = null;
+  // 写真操作
+  let selectedImage     = null;
+  let activeDragImage   = null;
   let activeResizeImage = null;
-
-  // ドラッグ / リサイズ用の一時保持
   let dragStartX = 0, dragStartY = 0;
   let imgStartX  = 0, imgStartY  = 0;
   let imgStartWidth = 0, imgStartHeight = 0;
-  let imgAspectRatio = 1;   // 対象画像ごとのアスペクト比
-  let activeHandle = '';    // 'tl'|'tr'|'bl'|'br'
+  let imgAspectRatio = 1;
+  let activeHandle = '';
 
-  // ピンチズーム用
+  // ピンチズーム
   let isPinching           = false;
   let initialPinchDistance = 0;
   let initialPinchWidth    = 0;
   let initialPinchHeight   = 0;
   let initialPinchX        = 0;
   let initialPinchY        = 0;
-  let pinchAspectRatio     = 1; // ピンチ開始時に固定するアスペクト比
+  let pinchAspectRatio     = 1;
 
-  // マルチタッチ防止（PointerID を追跡）
+  // テキストボックス操作
+  let selectedTextBox = null;
+
+  // マルチタッチ防止
   const activePointers = new Set();
 
-  // デバイスピクセル比（resizeCanvas 内で更新）
+  // デバイスピクセル比
   let dpr = window.devicePixelRatio || 1;
 
   // =========================================================================
@@ -59,34 +59,41 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   const modeDrawBtn  = document.getElementById('mode-draw');
   const modePhotoBtn = document.getElementById('mode-photo');
+  const modeTextBtn  = document.getElementById('mode-text');
   const clearBtn     = document.getElementById('clear-btn');
   const saveBtn      = document.getElementById('save-btn');
 
   const drawTools       = document.getElementById('draw-tools');
   const photoTools      = document.getElementById('photo-tools');
-  const photoEditOptions = document.getElementById('photo-edit-options');
-  const addPhotoBtn     = document.getElementById('add-photo-btn');
-  const deletePhotoBtn  = document.getElementById('delete-photo-btn');
-  const sendBackBtn     = document.getElementById('send-back-btn');
-  const bringFrontBtn   = document.getElementById('bring-front-btn');
-  const photoInput      = document.getElementById('photo-input');
+  const textTools       = document.getElementById('text-tools');
 
-  const colorBtns  = document.querySelectorAll('.color-btn');
-  const sizeBtns   = document.querySelectorAll('.size-btn');
-  const eraserBtn  = document.getElementById('eraser-btn');
-  const undoBtn    = document.getElementById('undo-btn');
+  const photoEditOptions = document.getElementById('photo-edit-options');
+  const addPhotoBtn      = document.getElementById('add-photo-btn');
+  const deletePhotoBtn   = document.getElementById('delete-photo-btn');
+  const sendBackBtn      = document.getElementById('send-back-btn');
+  const bringFrontBtn    = document.getElementById('bring-front-btn');
+  const photoInput       = document.getElementById('photo-input');
+
+  const textEditOptions = document.getElementById('text-edit-options');
+  const deleteTextBtn   = document.getElementById('delete-text-btn');
+
+  const colorBtns = document.querySelectorAll('.color-btn');
+  const sizeBtns  = document.querySelectorAll('.size-btn');
+  const eraserBtn = document.getElementById('eraser-btn');
+  const undoBtn   = document.getElementById('undo-btn');
 
   const canvasContainer = document.getElementById('canvas-container');
   const photoLayer      = document.getElementById('photo-layer');
   const canvas          = document.getElementById('drawing-canvas');
   const ctx             = canvas.getContext('2d');
+  const textLayer       = document.getElementById('text-layer');
 
   const statusIndicator = document.getElementById('status-indicator');
   const statusIcon      = document.getElementById('status-icon');
   const statusText      = document.getElementById('status-text');
 
-  const confirmModal   = document.getElementById('confirm-modal');
-  const modalCancelBtn = document.getElementById('modal-cancel-btn');
+  const confirmModal    = document.getElementById('confirm-modal');
+  const modalCancelBtn  = document.getElementById('modal-cancel-btn');
   const modalConfirmBtn = document.getElementById('modal-confirm-btn');
 
   const saveToast = document.getElementById('save-toast');
@@ -97,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function resizeCanvas() {
     const rect = canvasContainer.getBoundingClientRect();
 
-    // 現在の描画内容を一時保存
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width  = canvas.width;
     tempCanvas.height = canvas.height;
@@ -112,7 +118,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ctx.scale(dpr, dpr);
 
-    // 元の描画内容を復元（canvas.width リセットで変換行列もリセットされるため安全）
     if (tempCanvas.width > 0 && tempCanvas.height > 0) {
       ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height,
                                 0, 0, rect.width, rect.height);
@@ -126,11 +131,11 @@ document.addEventListener('DOMContentLoaded', () => {
     ctx.lineJoin  = 'round';
     if (isEraser) {
       ctx.globalCompositeOperation = 'destination-out';
-      ctx.lineWidth  = penWidth;
+      ctx.lineWidth   = penWidth;
       ctx.strokeStyle = 'rgba(0,0,0,1)';
     } else {
       ctx.globalCompositeOperation = 'source-over';
-      ctx.lineWidth  = penWidth;
+      ctx.lineWidth   = penWidth;
       ctx.strokeStyle = penColor;
     }
   }
@@ -139,17 +144,42 @@ document.addEventListener('DOMContentLoaded', () => {
   setTimeout(resizeCanvas, 100);
 
   // =========================================================================
-  // Undo ユーティリティ
+  // Undo（キャンバス ＋ 写真 ＋ テキストの統合スナップショット）
   // =========================================================================
+
+  function capturePhotosState() {
+    return Array.from(photoLayer.querySelectorAll('.draggable-image')).map(el => ({
+      src:    el.querySelector('img').src,
+      left:   parseFloat(el.style.left),
+      top:    parseFloat(el.style.top),
+      width:  parseFloat(el.style.width),
+      height: parseFloat(el.style.height),
+    }));
+  }
+
+  function captureTextState() {
+    return Array.from(textLayer.querySelectorAll('.text-box')).map(box => ({
+      html: box.querySelector('.text-content').innerHTML,
+      left: box.style.left,
+      top:  box.style.top,
+    }));
+  }
+
   function saveStateForUndo() {
     if (undoStack.length >= MAX_UNDO) undoStack.shift();
-    undoStack.push(canvas.toDataURL());
+    undoStack.push({
+      canvasDataUrl: canvas.toDataURL(),
+      photos: capturePhotosState(),
+      texts:  captureTextState(),
+    });
     updateUndoBtn();
   }
 
   function performUndo() {
     if (undoStack.length === 0) return;
-    const prevDataUrl = undoStack.pop();
+    const snap = undoStack.pop();
+
+    // キャンバス復元
     const img = new Image();
     img.onload = () => {
       const rect = canvasContainer.getBoundingClientRect();
@@ -157,7 +187,40 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.drawImage(img, 0, 0, rect.width, rect.height);
       setupPenProperties();
     };
-    img.src = prevDataUrl;
+    img.src = snap.canvasDataUrl;
+
+    // 写真復元
+    deselectAllImages();
+    photoLayer.innerHTML = '';
+    snap.photos.forEach(p => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'draggable-image';
+      const imgEl = document.createElement('img');
+      imgEl.src = p.src;
+      wrapper.appendChild(imgEl);
+      ['tl', 'tr', 'bl', 'br'].forEach(pos => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle ${pos}`;
+        handle.setAttribute('data-handle', pos);
+        wrapper.appendChild(handle);
+      });
+      wrapper.style.left   = p.left   + 'px';
+      wrapper.style.top    = p.top    + 'px';
+      wrapper.style.width  = p.width  + 'px';
+      wrapper.style.height = p.height + 'px';
+      photoLayer.appendChild(wrapper);
+      setupImageEvents(wrapper);
+    });
+
+    // テキスト復元
+    deselectAllTextBoxes();
+    textLayer.innerHTML = '';
+    snap.texts.forEach(t => {
+      const box = buildTextBoxElement(t.html, t.left, t.top);
+      textLayer.appendChild(box);
+      setupTextBoxEvents(box);
+    });
+
     updateUndoBtn();
   }
 
@@ -173,43 +236,48 @@ document.addEventListener('DOMContentLoaded', () => {
   function switchMode(mode) {
     currentMode = mode;
 
+    // モードボタンのアクティブ状態
+    modeDrawBtn.classList.toggle('active', mode === 'draw');
+    modePhotoBtn.classList.toggle('active', mode === 'photo');
+    modeTextBtn.classList.toggle('active', mode === 'text');
+
+    // ツールグループの表示切り替え
+    drawTools.classList.toggle('hidden', mode !== 'draw');
+    photoTools.classList.toggle('hidden', mode !== 'photo');
+    textTools.classList.toggle('hidden', mode !== 'text');
+
+    // キャンバスのポインターイベント
+    canvas.style.pointerEvents = mode === 'draw' ? 'auto' : 'none';
+
+    // テキストレイヤーのインタラクション（文字モード時のみ有効）
+    textLayer.classList.toggle('interactive', mode === 'text');
+
     if (mode === 'draw') {
-      modeDrawBtn.classList.add('active');
-      modePhotoBtn.classList.remove('active');
-      drawTools.classList.remove('hidden');
-      photoTools.classList.add('hidden');
-
-      canvas.style.pointerEvents = 'auto';
       deselectAllImages();
-
+      deselectAllTextBoxes();
       updateStatusDraw();
-    } else {
-      modeDrawBtn.classList.remove('active');
-      modePhotoBtn.classList.add('active');
-      drawTools.classList.add('hidden');
-      photoTools.classList.remove('hidden');
-
-      // キャンバスを透過して下の画像を操作できるように
-      canvas.style.pointerEvents = 'none';
-
+    } else if (mode === 'photo') {
+      deselectAllTextBoxes();
       statusIndicator.className = 'photo-mode';
       statusIcon.textContent = '📷';
-      statusText.textContent = 'しゃしん モード（しゃしんを うごかせるよ）';
+      statusText.textContent = 'しゃしん モード';
+    } else {
+      deselectAllImages();
+      statusIndicator.className = 'text-mode';
+      statusIcon.textContent = '📝';
+      statusText.textContent = '文字 モード';
     }
   }
 
   function updateStatusDraw() {
-    statusIndicator.className = isEraser
-      ? 'draw-mode eraser-active'
-      : 'draw-mode';
+    statusIndicator.className = isEraser ? 'draw-mode eraser-active' : 'draw-mode';
     statusIcon.textContent = isEraser ? '🩹' : '✏️';
-    statusText.textContent = isEraser
-      ? 'けしゴム モード（けせるよ）'
-      : 'おえかき モード（えのぐで かけるよ）';
+    statusText.textContent = isEraser ? 'けしゴム モード' : 'おえかき モード';
   }
 
   modeDrawBtn.addEventListener('click',  () => switchMode('draw'));
   modePhotoBtn.addEventListener('click', () => switchMode('photo'));
+  modeTextBtn.addEventListener('click',  () => switchMode('text'));
 
   // =========================================================================
   // お絵かき（描画）ロジック
@@ -227,13 +295,10 @@ document.addEventListener('DOMContentLoaded', () => {
     return { x: clientX - rect.left, y: clientY - rect.top };
   }
 
-  // --- PointerID を使ったマルチタッチ防止 ---
   canvas.addEventListener('pointerdown', (e) => {
     if (currentMode !== 'draw') return;
 
     activePointers.add(e.pointerId);
-
-    // 2本指以上のタッチは描画しない
     if (activePointers.size > 1) {
       isDrawing = false;
       return;
@@ -241,9 +306,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     e.preventDefault();
 
-    // Undo 用に描画前の状態を保存
-    saveStateForUndo();
+    // 消しゴムモード時：テキストボックスの範囲内なら削除してキャンバス描画をスキップ
+    if (isEraser) {
+      const coords = getCoordinates(e);
+      const canvasRect = canvas.getBoundingClientRect();
+      const boxes = Array.from(textLayer.querySelectorAll('.text-box'));
+      for (const box of boxes) {
+        const br = box.getBoundingClientRect();
+        if (coords.x >= br.left - canvasRect.left &&
+            coords.x <= br.right  - canvasRect.left &&
+            coords.y >= br.top    - canvasRect.top &&
+            coords.y <= br.bottom - canvasRect.top) {
+          saveStateForUndo();
+          box.remove();
+          deselectAllTextBoxes();
+          activePointers.delete(e.pointerId);
+          return;
+        }
+      }
+    }
 
+    saveStateForUndo();
     isDrawing = true;
     const coords = getCoordinates(e);
     lastX = coords.x;
@@ -251,10 +334,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     setupPenProperties();
 
-    // タップだけでも点を描画
+    // タップだけでも点を描く
     ctx.beginPath();
     ctx.arc(lastX, lastY, penWidth / 2, 0, Math.PI * 2);
     if (isEraser) {
+      ctx.globalCompositeOperation = 'destination-out';
       ctx.fillStyle = 'rgba(0,0,0,1)';
     } else {
       ctx.fillStyle = penColor;
@@ -267,7 +351,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   canvas.addEventListener('pointermove', (e) => {
     if (!isDrawing || currentMode !== 'draw') return;
-    if (activePointers.size > 1) return; // マルチタッチ中は描かない
+    if (activePointers.size > 1) return;
 
     const coords = getCoordinates(e);
     ctx.beginPath();
@@ -280,37 +364,22 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
   });
 
-  canvas.addEventListener('pointerup', (e) => {
-    activePointers.delete(e.pointerId);
-    isDrawing = false;
-  });
+  canvas.addEventListener('pointerup',     (e) => { activePointers.delete(e.pointerId); isDrawing = false; });
+  canvas.addEventListener('pointercancel', (e) => { activePointers.delete(e.pointerId); isDrawing = false; });
+  canvas.addEventListener('pointerleave',  ()  => { isDrawing = false; });
 
-  canvas.addEventListener('pointercancel', (e) => {
-    activePointers.delete(e.pointerId);
-    isDrawing = false;
-  });
-
-  canvas.addEventListener('pointerleave', () => {
-    isDrawing = false;
-  });
-
-  // --- いろの選択 ---
+  // --- いろ ---
   colorBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       colorBtns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       penColor = btn.getAttribute('data-color');
-
-      // 色を選んだら自動的にペンモードに戻る
-      if (isEraser) {
-        setEraserMode(false);
-      } else {
-        setupPenProperties();
-      }
+      if (isEraser) setEraserMode(false);
+      else setupPenProperties();
     });
   });
 
-  // --- ふとさの選択 ---
+  // --- ふとさ ---
   sizeBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       sizeBtns.forEach(b => b.classList.remove('active'));
@@ -320,50 +389,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- 消しゴムボタン ---
+  // --- 消しゴム ---
   function setEraserMode(active) {
     isEraser = active;
     eraserBtn.classList.toggle('active', active);
     canvas.classList.toggle('eraser-cursor', active);
-
-    // 色パレットの見た目をアップデート
-    const colorPalette = document.querySelector('.color-palette');
-    colorPalette.classList.toggle('eraser-active', active);
-
+    document.querySelector('.color-palette').classList.toggle('eraser-active', active);
     setupPenProperties();
     updateStatusDraw();
   }
 
-  eraserBtn.addEventListener('click', () => {
-    setEraserMode(!isEraser);
-  });
+  eraserBtn.addEventListener('click', () => setEraserMode(!isEraser));
 
-  // --- 元に戻す ---
-  undoBtn.addEventListener('click', () => {
-    performUndo();
-  });
+  // --- もどす ---
+  undoBtn.addEventListener('click', performUndo);
 
   // =========================================================================
   // しゃしん（画像操作）ロジック
   // =========================================================================
 
-  addPhotoBtn.addEventListener('click', () => {
-    photoInput.click();
-  });
+  addPhotoBtn.addEventListener('click', () => photoInput.click());
 
   photoInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
+    saveStateForUndo();
     const reader = new FileReader();
     reader.onload = (ev) => createDraggableImage(ev.target.result);
     reader.readAsDataURL(file);
-
-    // 同じファイルを連続して選べるようにリセット
     photoInput.value = '';
   });
 
-  // --- 画像要素の生成 ---
   function createDraggableImage(src) {
     const wrapper = document.createElement('div');
     wrapper.className = 'draggable-image';
@@ -372,7 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
     img.src = src;
     wrapper.appendChild(img);
 
-    // 四隅ハンドル
     ['tl', 'tr', 'bl', 'br'].forEach(pos => {
       const handle = document.createElement('div');
       handle.className = `resize-handle ${pos}`;
@@ -384,28 +439,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     img.onload = () => {
       const containerRect = canvasContainer.getBoundingClientRect();
-      const w = img.naturalWidth  || 250;
-      const h = img.naturalHeight || 250;
-      const ratio = w / h;
-
+      const ratio = (img.naturalWidth || 250) / (img.naturalHeight || 250);
       let initWidth  = Math.min(containerRect.width * 0.35, 280);
       let initHeight = initWidth / ratio;
-
-      const initLeft = (containerRect.width  - initWidth)  / 2 + (Math.random() * 40 - 20);
-      const initTop  = (containerRect.height - initHeight) / 2 + (Math.random() * 40 - 20);
-
       wrapper.style.width  = initWidth  + 'px';
       wrapper.style.height = initHeight + 'px';
-      wrapper.style.left   = initLeft   + 'px';
-      wrapper.style.top    = initTop    + 'px';
-
+      wrapper.style.left   = ((containerRect.width  - initWidth)  / 2 + (Math.random() * 40 - 20)) + 'px';
+      wrapper.style.top    = ((containerRect.height - initHeight) / 2 + (Math.random() * 40 - 20)) + 'px';
       selectImage(wrapper);
     };
 
     setupImageEvents(wrapper);
   }
 
-  // --- 選択 / 選択解除 ---
   function selectImage(el) {
     deselectAllImages();
     selectedImage = el;
@@ -420,96 +466,89 @@ document.addEventListener('DOMContentLoaded', () => {
     photoEditOptions.classList.add('hidden');
   }
 
-  // キャンバス背景タップで選択解除（しゃしんモード時）
   canvasContainer.addEventListener('pointerdown', (e) => {
     if (currentMode !== 'photo') return;
-    if (!e.target.closest('.draggable-image')) {
-      deselectAllImages();
-    }
+    if (!e.target.closest('.draggable-image')) deselectAllImages();
   });
 
-  // --- 削除 ---
   deletePhotoBtn.addEventListener('click', () => {
-    if (selectedImage) {
-      selectedImage.remove();
-      deselectAllImages();
-    }
+    if (!selectedImage) return;
+    saveStateForUndo();
+    selectedImage.remove();
+    deselectAllImages();
   });
 
-  // --- 前面 / 後面 ---
+  // 写真の重なり順：1枚ずつ前後に移動
   bringFrontBtn.addEventListener('click', () => {
     if (!selectedImage) return;
-    photoLayer.appendChild(selectedImage); // DOM最後 = 最前面
+    saveStateForUndo();
+    const next = selectedImage.nextElementSibling;
+    if (next && next.classList.contains('draggable-image')) {
+      // next を selectedImage の直前に挿入 → selectedImage が1枚前に出る
+      photoLayer.insertBefore(next, selectedImage);
+    }
   });
 
   sendBackBtn.addEventListener('click', () => {
     if (!selectedImage) return;
-    photoLayer.insertBefore(selectedImage, photoLayer.firstChild); // DOM先頭 = 最背面
+    saveStateForUndo();
+    const prev = selectedImage.previousElementSibling;
+    if (prev && prev.classList.contains('draggable-image')) {
+      // selectedImage を prev の直前に挿入 → 1枚後ろへ
+      photoLayer.insertBefore(selectedImage, prev);
+    }
   });
 
-  // --- 画像個別のイベント（ドラッグ・リサイズ・ピンチ）---
+  // 画像ごとのドラッグ・リサイズ・ピンチ
   function setupImageEvents(el) {
 
-    // ----- PointerEvents: ドラッグ & ハンドルリサイズ -----
+    let savedForThisInteraction = false;
+    let savedForThisPinch       = false;
+
     el.addEventListener('pointerdown', (e) => {
       if (currentMode !== 'photo') return;
       e.stopPropagation();
+      savedForThisInteraction = false;
 
       const handleEl = e.target.closest('.resize-handle');
       if (handleEl) {
-        // リサイズ開始
         activeResizeImage = el;
         activeHandle = handleEl.getAttribute('data-handle');
-
         const rect          = el.getBoundingClientRect();
         const containerRect = canvasContainer.getBoundingClientRect();
-
         imgStartX      = rect.left - containerRect.left;
         imgStartY      = rect.top  - containerRect.top;
         imgStartWidth  = rect.width;
         imgStartHeight = rect.height;
         imgAspectRatio = imgStartWidth / imgStartHeight;
-
         dragStartX = e.clientX;
         dragStartY = e.clientY;
-
         el.setPointerCapture(e.pointerId);
         return;
       }
 
-      // 通常のドラッグ開始
       selectImage(el);
       activeDragImage = el;
-
       const rect          = el.getBoundingClientRect();
       const containerRect = canvasContainer.getBoundingClientRect();
-
-      imgStartX = rect.left - containerRect.left;
-      imgStartY = rect.top  - containerRect.top;
-
+      imgStartX  = rect.left - containerRect.left;
+      imgStartY  = rect.top  - containerRect.top;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
-
-      // 操作中の画像を最前面へ
       photoLayer.appendChild(el);
-
       el.setPointerCapture(e.pointerId);
     });
 
     el.addEventListener('pointermove', (e) => {
-      if (isPinching) return; // ピンチ中はポインタ処理を無効化
+      if (isPinching) return;
 
-      // リサイズ
       if (activeResizeImage === el) {
+        if (!savedForThisInteraction) { saveStateForUndo(); savedForThisInteraction = true; }
         e.stopPropagation();
 
         const dx = e.clientX - dragStartX;
-        const dy = e.clientY - dragStartY;
-
-        let newWidth  = imgStartWidth;
-        let newHeight = imgStartHeight;
-        let newLeft   = imgStartX;
-        let newTop    = imgStartY;
+        let newWidth = imgStartWidth, newHeight = imgStartHeight;
+        let newLeft = imgStartX, newTop = imgStartY;
 
         if (activeHandle === 'br') {
           newWidth  = Math.max(50, imgStartWidth + dx);
@@ -536,88 +575,62 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // ドラッグ移動
       if (activeDragImage === el) {
+        if (!savedForThisInteraction) { saveStateForUndo(); savedForThisInteraction = true; }
         e.stopPropagation();
 
         const dx = e.clientX - dragStartX;
         const dy = e.clientY - dragStartY;
-
-        let targetLeft = imgStartX + dx;
-        let targetTop  = imgStartY + dy;
-
         const containerRect = canvasContainer.getBoundingClientRect();
-        const imgW = el.offsetWidth;
-        const imgH = el.offsetHeight;
+        const imgW = el.offsetWidth, imgH = el.offsetHeight;
 
-        // 画像が完全に消えないように端に余白を持たせる
-        targetLeft = Math.max(-imgW + 40, Math.min(containerRect.width  - 40, targetLeft));
-        targetTop  = Math.max(-imgH + 40, Math.min(containerRect.height - 40, targetTop));
-
-        el.style.left = targetLeft + 'px';
-        el.style.top  = targetTop  + 'px';
+        el.style.left = Math.max(-imgW + 40, Math.min(containerRect.width  - 40, imgStartX + dx)) + 'px';
+        el.style.top  = Math.max(-imgH + 40, Math.min(containerRect.height - 40, imgStartY + dy)) + 'px';
       }
     });
 
     const stopDragResize = (e) => {
-      if (activeDragImage === el) {
-        activeDragImage = null;
-        el.releasePointerCapture(e.pointerId);
-      }
-      if (activeResizeImage === el) {
-        activeResizeImage = null;
-        el.releasePointerCapture(e.pointerId);
-      }
+      if (activeDragImage   === el) { activeDragImage   = null; el.releasePointerCapture(e.pointerId); }
+      if (activeResizeImage === el) { activeResizeImage = null; el.releasePointerCapture(e.pointerId); }
     };
-
     el.addEventListener('pointerup',     stopDragResize);
     el.addEventListener('pointercancel', stopDragResize);
 
-    // ----- TouchEvents: ピンチイン・アウト -----
+    // ピンチ
     el.addEventListener('touchstart', (e) => {
       if (currentMode !== 'photo') return;
-
       if (e.touches.length === 2) {
         e.stopPropagation();
+        savedForThisPinch = false;
         isPinching = true;
         selectImage(el);
-
-        const t1 = e.touches[0];
-        const t2 = e.touches[1];
+        const t1 = e.touches[0], t2 = e.touches[1];
         initialPinchDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-
         const rect          = el.getBoundingClientRect();
         const containerRect = canvasContainer.getBoundingClientRect();
-
         initialPinchWidth  = rect.width;
         initialPinchHeight = rect.height;
         initialPinchX      = rect.left - containerRect.left;
         initialPinchY      = rect.top  - containerRect.top;
-
-        // アスペクト比をここで確定（グローバル変数を汚染しない）
-        pinchAspectRatio = initialPinchWidth / initialPinchHeight;
+        pinchAspectRatio   = initialPinchWidth / initialPinchHeight;
       }
     }, { passive: false });
 
     el.addEventListener('touchmove', (e) => {
       if (currentMode !== 'photo' || !isPinching || e.touches.length !== 2) return;
-
       e.stopPropagation();
-      e.preventDefault(); // iPad Safari のスクロール・ズーム防止
+      e.preventDefault();
 
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
+      if (!savedForThisPinch) { saveStateForUndo(); savedForThisPinch = true; }
+
+      const t1 = e.touches[0], t2 = e.touches[1];
       const currentDistance = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
-
       if (initialPinchDistance <= 0) return;
 
       const scale = currentDistance / initialPinchDistance;
       const containerRect = canvasContainer.getBoundingClientRect();
-
-      let newWidth = Math.max(50, Math.min(containerRect.width * 1.5, initialPinchWidth * scale));
-      let newHeight = newWidth / pinchAspectRatio; // ← 修正ポイント：画像ごとのアスペクト比を使用
-
-      // 中心を固定したまま拡大縮小
+      const newWidth  = Math.max(50, Math.min(containerRect.width * 1.5, initialPinchWidth  * scale));
+      const newHeight = newWidth / pinchAspectRatio;
       const dw = newWidth  - initialPinchWidth;
       const dh = newHeight - initialPinchHeight;
 
@@ -636,6 +649,145 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // =========================================================================
+  // テキストボックス（文字モード）ロジック
+  // =========================================================================
+
+  // テキストボックスの DOM 要素を生成して返す（appendChild と setupTextBoxEvents は呼び出し元で行う）
+  function buildTextBoxElement(html, left, top) {
+    const box = document.createElement('div');
+    box.className = 'text-box';
+    box.style.left = left;
+    box.style.top  = top;
+
+    const handle = document.createElement('div');
+    handle.className = 'text-drag-handle';
+    handle.textContent = '≡ うごかす';
+    box.appendChild(handle);
+
+    const content = document.createElement('div');
+    content.className = 'text-content';
+    content.contentEditable = 'true';
+    content.spellcheck = false;
+    content.innerHTML = html;
+    box.appendChild(content);
+
+    return box;
+  }
+
+  // キャンバス上の指定位置に新しいテキストボックスを作成する
+  function createTextBox(x, y) {
+    const containerRect = canvasContainer.getBoundingClientRect();
+    const left = Math.max(4, Math.min(containerRect.width  - 110, x - 45)) + 'px';
+    const top  = Math.max(0, Math.min(containerRect.height - 80,  y - 16)) + 'px';
+
+    const box = buildTextBoxElement('', left, top);
+    textLayer.appendChild(box);
+    setupTextBoxEvents(box);
+    selectTextBox(box);
+
+    // 少し待ってからフォーカス（iOS でキーボードが確実に開く）
+    setTimeout(() => box.querySelector('.text-content').focus(), 80);
+  }
+
+  // テキストボックスの選択
+  function selectTextBox(box) {
+    deselectAllTextBoxes();
+    selectedTextBox = box;
+    box.classList.add('selected');
+    textEditOptions.classList.remove('hidden');
+  }
+
+  function deselectAllTextBoxes() {
+    textLayer.querySelectorAll('.text-box.selected').forEach(el => el.classList.remove('selected'));
+    selectedTextBox = null;
+    textEditOptions.classList.add('hidden');
+  }
+
+  // 文字モード：キャンバスタップで新しいテキストボックスを作成
+  textLayer.addEventListener('pointerdown', (e) => {
+    if (currentMode !== 'text') return;
+
+    // 既存のテキストボックスをタップした場合はそちらで処理
+    if (e.target.closest('.text-box')) return;
+
+    // 別のテキストボックスが編集中なら、まずキーボードを閉じる
+    const focused = document.activeElement;
+    if (focused && focused.classList.contains('text-content')) {
+      focused.blur();
+      deselectAllTextBoxes();
+      return;
+    }
+
+    saveStateForUndo();
+    const rect = textLayer.getBoundingClientRect();
+    createTextBox(e.clientX - rect.left, e.clientY - rect.top);
+  });
+
+  // テキストボックスの削除ボタン
+  deleteTextBtn.addEventListener('click', () => {
+    if (!selectedTextBox) return;
+    saveStateForUndo();
+    selectedTextBox.remove();
+    deselectAllTextBoxes();
+  });
+
+  // 各テキストボックスのドラッグ・選択イベント
+  function setupTextBoxEvents(box) {
+    const handle  = box.querySelector('.text-drag-handle');
+    const content = box.querySelector('.text-content');
+
+    let isDragging        = false;
+    let txtDragStartX     = 0, txtDragStartY = 0;
+    let txtInitX          = 0, txtInitY       = 0;
+    let savedForThisDrag  = false;
+
+    // テキストボックス全体のタップ → 選択
+    box.addEventListener('pointerdown', (e) => {
+      if (currentMode !== 'text') return;
+      e.stopPropagation();
+      selectTextBox(box);
+    });
+
+    // ドラッグハンドルで移動
+    handle.addEventListener('pointerdown', (e) => {
+      if (currentMode !== 'text') return;
+      e.stopPropagation();
+      e.preventDefault();
+
+      savedForThisDrag = false;
+      isDragging    = true;
+      txtDragStartX = e.clientX;
+      txtDragStartY = e.clientY;
+      txtInitX      = parseFloat(box.style.left) || 0;
+      txtInitY      = parseFloat(box.style.top)  || 0;
+
+      handle.setPointerCapture(e.pointerId);
+    });
+
+    handle.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+
+      if (!savedForThisDrag) { saveStateForUndo(); savedForThisDrag = true; }
+
+      const dx = e.clientX - txtDragStartX;
+      const dy = e.clientY - txtDragStartY;
+      const containerRect = canvasContainer.getBoundingClientRect();
+
+      box.style.left = Math.max(0, Math.min(containerRect.width  - 50, txtInitX + dx)) + 'px';
+      box.style.top  = Math.max(0, Math.min(containerRect.height - 40, txtInitY + dy)) + 'px';
+    });
+
+    const stopTextDrag = () => { isDragging = false; };
+    handle.addEventListener('pointerup',     stopTextDrag);
+    handle.addEventListener('pointercancel', stopTextDrag);
+
+    // テキスト入力エリア：フォーカス時に選択
+    content.addEventListener('focus', () => {
+      if (currentMode === 'text') selectTextBox(box);
+    });
+  }
+
+  // =========================================================================
   // 全消去（リセット）
   // =========================================================================
   clearBtn.addEventListener('click', () => {
@@ -647,13 +799,13 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   modalConfirmBtn.addEventListener('click', () => {
-    // キャンバスクリア前に undo 用として保存
     saveStateForUndo();
-
     const rect = canvasContainer.getBoundingClientRect();
     ctx.clearRect(0, 0, rect.width, rect.height);
     photoLayer.innerHTML = '';
+    textLayer.innerHTML  = '';
     deselectAllImages();
+    deselectAllTextBoxes();
     confirmModal.classList.add('hidden');
   });
 
@@ -662,14 +814,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // =========================================================================
   saveBtn.addEventListener('click', () => {
     deselectAllImages();
+    deselectAllTextBoxes();
     setTimeout(exportCardAsPNG, 150);
   });
 
   async function exportCardAsPNG() {
+    // フォントが確実にロードされてから書き出す
+    await document.fonts.ready;
+
     const containerRect = canvasContainer.getBoundingClientRect();
     const exportDpr = window.devicePixelRatio || 1;
 
-    // 保存用キャンバスを生成
     const exportCanvas = document.createElement('canvas');
     exportCanvas.width  = containerRect.width  * exportDpr;
     exportCanvas.height = containerRect.height * exportDpr;
@@ -680,34 +835,70 @@ document.addEventListener('DOMContentLoaded', () => {
     exportCtx.fillStyle = '#ffffff';
     exportCtx.fillRect(0, 0, containerRect.width, containerRect.height);
 
-    // 2. 写真レイヤーをDOM順（z-order通り）に描画
-    const imgElements = Array.from(photoLayer.querySelectorAll('.draggable-image'));
-
-    const drawTasks = imgElements.map(wrapper => new Promise((resolve) => {
-      const img    = wrapper.querySelector('img');
-      const left   = parseFloat(wrapper.style.left);
-      const top    = parseFloat(wrapper.style.top);
-      const width  = parseFloat(wrapper.style.width);
-      const height = parseFloat(wrapper.style.height);
-
-      // DataURL は同一オリジンなので toDataURL でも安全
-      const exportImg = new Image();
-      exportImg.onload  = () => resolve({ img: exportImg, left, top, width, height });
-      exportImg.onerror = () => resolve(null);
-      exportImg.src = img.src;
-    }));
-
+    // 2. 写真レイヤーを DOM 順に描画
+    const drawTasks = Array.from(photoLayer.querySelectorAll('.draggable-image')).map(wrapper =>
+      new Promise((resolve) => {
+        const img    = wrapper.querySelector('img');
+        const left   = parseFloat(wrapper.style.left);
+        const top    = parseFloat(wrapper.style.top);
+        const width  = parseFloat(wrapper.style.width);
+        const height = parseFloat(wrapper.style.height);
+        const ei = new Image();
+        ei.onload  = () => resolve({ img: ei, left, top, width, height });
+        ei.onerror = () => resolve(null);
+        ei.src = img.src;
+      })
+    );
     const results = await Promise.all(drawTasks);
     results.forEach(item => {
-      if (item) {
-        exportCtx.drawImage(item.img, item.left, item.top, item.width, item.height);
-      }
+      if (item) exportCtx.drawImage(item.img, item.left, item.top, item.width, item.height);
     });
 
     // 3. 手書きキャンバスを合成
     exportCtx.drawImage(canvas, 0, 0, containerRect.width, containerRect.height);
 
-    // 4. ダウンロード / 共有
+    // 4. テキストボックスを描画
+    const canvasRect = canvas.getBoundingClientRect();
+    textLayer.querySelectorAll('.text-box').forEach(box => {
+      const content = box.querySelector('.text-content');
+      const text = (content.innerText || '').trim();
+      if (!text) return;
+
+      const br     = box.getBoundingClientRect();
+      const bLeft  = br.left - canvasRect.left;
+      const bTop   = br.top  - canvasRect.top;
+      const bWidth = br.width;
+      const bHeight = br.height;
+
+      // 背景
+      exportCtx.fillStyle = 'rgba(255, 255, 255, 0.96)';
+      exportCtx.beginPath();
+      if (exportCtx.roundRect) {
+        exportCtx.roundRect(bLeft, bTop, bWidth, bHeight, 10);
+      } else {
+        exportCtx.rect(bLeft, bTop, bWidth, bHeight);
+      }
+      exportCtx.fill();
+
+      // テキスト（ドラッグハンドル分を除いた位置から描く）
+      const handleHeight = box.querySelector('.text-drag-handle').getBoundingClientRect().height;
+      const fontSize = 32;
+      const paddingLeft = 14;
+      const paddingTop  = 8;
+      exportCtx.font = `900 ${fontSize}px 'Zen Maru Gothic', sans-serif`;
+      exportCtx.fillStyle = '#1a1a1a';
+      exportCtx.textBaseline = 'top';
+
+      text.split('\n').forEach((line, i) => {
+        exportCtx.fillText(
+          line,
+          bLeft + paddingLeft,
+          bTop + handleHeight + paddingTop + i * (fontSize * 1.35)
+        );
+      });
+    });
+
+    // 5. ダウンロード / 共有
     try {
       const dataUrl = exportCanvas.toDataURL('image/png');
       const now = new Date();
@@ -720,7 +911,6 @@ document.addEventListener('DOMContentLoaded', () => {
         String(now.getSeconds()).padStart(2, '0');
       const filename = `かーどメーカー_${dateStr}.png`;
 
-      // Web Share API 対応（iPad/iOS で写真アプリに直接保存できる）
       if (navigator.share && navigator.canShare) {
         try {
           const blob = await fetch(dataUrl).then(r => r.blob());
@@ -731,12 +921,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
         } catch (shareErr) {
-          // ユーザーがキャンセルした場合は何もしない。それ以外はダウンロードにフォールバック
           if (shareErr.name === 'AbortError') return;
         }
       }
 
-      // フォールバック：従来のダウンロードリンク
       const link = document.createElement('a');
       link.download = filename;
       link.href = dataUrl;
@@ -753,13 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function showSaveToast() {
     saveToast.classList.remove('hidden');
-    // 少し待ってからフェードイン
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        saveToast.classList.add('show');
-      });
-    });
-    // 2.5秒後にフェードアウト
+    requestAnimationFrame(() => requestAnimationFrame(() => saveToast.classList.add('show')));
     setTimeout(() => {
       saveToast.classList.remove('show');
       setTimeout(() => saveToast.classList.add('hidden'), 350);

@@ -23,27 +23,17 @@
 <body>
   <div id="app-container">
 
-    <!-- メイン操作バー -->
+    <!-- コンパクトなヘッダー（ロゴ ＋ 操作ボタン） -->
     <header id="main-header">
       <div class="logo-area">
         <span class="logo-emoji">🎨</span>
         <h1 id="app-title">かーどメーカー</h1>
       </div>
-
-      <!-- モード切り替え（えんぴつ／しゃしん）の超巨大トグル -->
-      <div id="mode-selector">
-        <button id="mode-draw" class="mode-btn active" aria-label="おえかきモード">
-          <span class="btn-icon">✏️</span>
-          <span class="btn-text">おえかき</span>
-        </button>
-        <button id="mode-photo" class="mode-btn" aria-label="しゃしんモード">
-          <span class="btn-icon">📷</span>
-          <span class="btn-text">しゃしん</span>
-        </button>
-      </div>
-
-      <!-- 右側のアクションボタン -->
       <div id="action-buttons">
+        <button id="undo-btn" class="action-btn undo" aria-label="もどす" disabled>
+          <span class="btn-icon">↩️</span>
+          <span class="btn-text">もどす</span>
+        </button>
         <button id="clear-btn" class="action-btn danger" aria-label="ぜんぶけす">
           <span class="btn-icon">🗑️</span>
           <span class="btn-text">ぜんぶけす</span>
@@ -55,100 +45,138 @@
       </div>
     </header>
 
-    <!-- ツールエリア（選択したモードに応じて中身が変わる） -->
-    <section id="tool-bar">
+    <!-- メインボディ（左サイドバー ＋ キャンバスエリア） -->
+    <div id="main-body">
 
-      <!-- おえかきツールのグループ -->
-      <div id="draw-tools" class="tool-group">
-        <!-- 色の選択（大きな丸ボタン） -->
-        <div class="tool-section">
-          <span class="section-label">いろ</span>
-          <div class="color-palette">
-            <button id="color-black" class="color-btn active" data-color="#000000" aria-label="くろ"></button>
-            <button id="color-red"   class="color-btn" data-color="#ff3b30" aria-label="あか"></button>
-            <button id="color-blue"  class="color-btn" data-color="#007aff" aria-label="あお"></button>
+      <!-- 左サイドバー -->
+      <aside id="sidebar">
+
+        <!-- モード切り替え（3つ） -->
+        <div id="mode-selector">
+          <button id="mode-draw" class="mode-btn active" aria-label="おえかきモード">
+            <span class="btn-icon">✏️</span>
+            <span class="btn-text">おえかき</span>
+          </button>
+          <button id="mode-photo" class="mode-btn" aria-label="しゃしんモード">
+            <span class="btn-icon">📷</span>
+            <span class="btn-text">しゃしん</span>
+          </button>
+          <button id="mode-text" class="mode-btn" aria-label="もじモード">
+            <span class="btn-icon">📝</span>
+            <span class="btn-text">文字</span>
+          </button>
+        </div>
+
+        <!-- ツールエリア（モードに応じて切り替わる） -->
+        <section id="tool-bar">
+
+          <!-- おえかきツール -->
+          <div id="draw-tools" class="tool-group">
+            <div class="tool-section">
+              <span class="section-label">いろ</span>
+              <div class="color-palette">
+                <button id="color-black" class="color-btn active" data-color="#000000" aria-label="くろ"></button>
+                <button id="color-red"   class="color-btn" data-color="#ff3b30" aria-label="あか"></button>
+                <button id="color-blue"  class="color-btn" data-color="#007aff" aria-label="あお"></button>
+              </div>
+            </div>
+
+            <div class="tool-section">
+              <span class="section-label">ふとさ</span>
+              <div class="size-palette">
+                <button class="size-btn" data-size="4"  aria-label="とてもほそい"><span class="dot size-1"></span></button>
+                <button class="size-btn" data-size="10" aria-label="ほそい">      <span class="dot size-2"></span></button>
+                <button class="size-btn active" data-size="20" aria-label="ふつう"><span class="dot size-3"></span></button>
+                <button class="size-btn" data-size="35" aria-label="ふとい">      <span class="dot size-4"></span></button>
+                <button class="size-btn" data-size="55" aria-label="とてもふとい"><span class="dot size-5"></span></button>
+              </div>
+            </div>
+
+            <div class="tool-section">
+              <button id="eraser-btn" class="tool-toggle-btn" aria-label="けしゴム">
+                <span class="btn-icon">🩹</span>
+                <span class="btn-text">けしゴム</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- しゃしんツール -->
+          <div id="photo-tools" class="tool-group hidden">
+            <div class="tool-section">
+              <button id="add-photo-btn" class="big-add-btn">
+                <span class="btn-icon">🖼️</span>
+                <span class="btn-text">しゃしんを いれる</span>
+              </button>
+              <!-- accept="image/*" → iOS/iPadでカメラとライブラリの両方が選べる -->
+              <input type="file" id="photo-input" accept="image/*" style="display:none">
+            </div>
+
+            <!-- 写真選択中のオプション -->
+            <div id="photo-edit-options" class="tool-section hidden">
+              <span class="section-label">えらんでいる しゃしん</span>
+              <button id="send-back-btn" class="photo-action-btn secondary">
+                <span class="btn-icon">⬇️</span>
+                <span class="btn-text">いちまい うしろへ</span>
+              </button>
+              <button id="bring-front-btn" class="photo-action-btn secondary">
+                <span class="btn-icon">⬆️</span>
+                <span class="btn-text">いちまい まえへ</span>
+              </button>
+              <button id="delete-photo-btn" class="photo-action-btn danger">
+                <span class="btn-icon">❌</span>
+                <span class="btn-text">けす</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- もじツール -->
+          <div id="text-tools" class="tool-group hidden">
+            <div class="tool-section">
+              <span class="section-label">もじ</span>
+              <p class="tool-hint">キャンバスを<br>たっぷして<br>もじを いれよう！</p>
+            </div>
+
+            <!-- テキスト選択中のオプション -->
+            <div id="text-edit-options" class="tool-section hidden">
+              <span class="section-label">えらんでいる もじ</span>
+              <button id="delete-text-btn" class="photo-action-btn danger">
+                <span class="btn-icon">❌</span>
+                <span class="btn-text">けす</span>
+              </button>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- ステータス表示（サイドバー下部） -->
+        <div id="status-footer">
+          <div id="status-indicator" class="draw-mode">
+            <span id="status-icon">✏️</span>
+            <span id="status-text">おえかき モード</span>
           </div>
         </div>
 
-        <!-- 太さの選択（5つの丸） -->
-        <div class="tool-section">
-          <span class="section-label">ふとさ</span>
-          <div class="size-palette">
-            <button class="size-btn" data-size="4"  aria-label="とてもほそい"><span class="dot size-1"></span></button>
-            <button class="size-btn" data-size="10" aria-label="ほそい">      <span class="dot size-2"></span></button>
-            <button class="size-btn active" data-size="20" aria-label="ふつう"><span class="dot size-3"></span></button>
-            <button class="size-btn" data-size="35" aria-label="ふとい">      <span class="dot size-4"></span></button>
-            <button class="size-btn" data-size="55" aria-label="とてもふとい"><span class="dot size-5"></span></button>
-          </div>
+      </aside>
+
+      <!-- メインキャンバスエリア -->
+      <main id="canvas-area">
+        <div id="canvas-container">
+          <!-- 写真が背後に配置される -->
+          <div id="photo-layer"></div>
+          <!-- 手書き用の透過キャンバスが前面に配置される -->
+          <canvas id="drawing-canvas"></canvas>
+          <!-- テキストボックスが最前面に配置される -->
+          <div id="text-layer"></div>
         </div>
+      </main>
 
-        <!-- 消しゴム ＋ もどす -->
-        <div class="tool-section">
-          <button id="eraser-btn" class="tool-toggle-btn" aria-label="けしゴム">
-            <span class="btn-icon">🩹</span>
-            <span class="btn-text">けしゴム</span>
-          </button>
-          <button id="undo-btn" class="tool-toggle-btn" aria-label="もどす">
-            <span class="btn-icon">↩️</span>
-            <span class="btn-text">もどす</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- しゃしんツールのグループ -->
-      <div id="photo-tools" class="tool-group hidden">
-        <div class="tool-section">
-          <span class="section-label">しゃしん</span>
-          <button id="add-photo-btn" class="big-add-btn">
-            <span class="btn-icon">🖼️</span>
-            <span class="btn-text">しゃしんを いれる</span>
-          </button>
-          <!-- accept="image/*" → iOS/iPadでカメラとライブラリの両方が選べる -->
-          <input type="file" id="photo-input" accept="image/*" style="display:none">
-        </div>
-
-        <!-- 写真選択中に表示されるクイックツール -->
-        <div id="photo-edit-options" class="tool-section hidden">
-          <span class="section-label">えらんでいる しゃしん</span>
-          <button id="send-back-btn" class="photo-action-btn secondary">
-            <span class="btn-icon">⬇️</span>
-            <span class="btn-text">うしろへ</span>
-          </button>
-          <button id="bring-front-btn" class="photo-action-btn secondary">
-            <span class="btn-icon">⬆️</span>
-            <span class="btn-text">まえへ</span>
-          </button>
-          <button id="delete-photo-btn" class="photo-action-btn danger">
-            <span class="btn-icon">❌</span>
-            <span class="btn-text">けす</span>
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <!-- メインキャンバス（お絵かきと写真の表示・操作エリア） -->
-    <main id="canvas-area">
-      <div id="canvas-container">
-        <!-- 写真が背後に配置される -->
-        <div id="photo-layer"></div>
-        <!-- 手書き用の透過キャンバスが前面に配置される -->
-        <canvas id="drawing-canvas"></canvas>
-      </div>
-    </main>
-
-    <!-- フッター：現在モード表示 -->
-    <footer id="status-footer">
-      <div id="status-indicator" class="draw-mode">
-        <span id="status-icon">✏️</span>
-        <span id="status-text">おえかき モード</span>
-      </div>
-    </footer>
+    </div><!-- /#main-body -->
 
     <!-- 全消去の確認モーダル -->
     <div id="confirm-modal" class="modal-overlay hidden">
       <div class="modal-content">
         <h2>ぜんぶ けしちゃう？</h2>
-        <p>かいた絵と しゃしんが ぜんぶ きえちゃうよ。</p>
+        <p>かいた絵と しゃしんと もじが ぜんぶ きえちゃうよ。</p>
         <div class="modal-buttons">
           <button id="modal-cancel-btn"  class="modal-btn cancel-btn">ダメ！（やめる）</button>
           <button id="modal-confirm-btn" class="modal-btn confirm-btn">いいよ！（けす）</button>
