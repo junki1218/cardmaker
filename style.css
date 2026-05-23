@@ -23,7 +23,9 @@ body {
   position: fixed; /* iOSでのスクロールバウンス防止 */
 }
 
-/* アプリ全体のコンテナ */
+/* --------------------------------------------------------------------------
+   アプリ全体のコンテナ
+   -------------------------------------------------------------------------- */
 #app-container {
   display: flex;
   flex-direction: column;
@@ -32,198 +34,245 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   ヘッダー（メイン操作バー）
+   ヘッダー（コンパクト化）
    -------------------------------------------------------------------------- */
 #main-header {
   background: linear-gradient(135deg, #ffe699 0%, #ffd166 100%);
-  padding: 10px 20px;
+  padding: 8px 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 4px 10px rgba(74, 63, 53, 0.08);
+  box-shadow: 0 3px 8px rgba(74, 63, 53, 0.08);
   z-index: 100;
-  border-bottom: 4px solid #f2bb3f;
-  min-height: 72px;
+  border-bottom: 3px solid #f2bb3f;
+  min-height: 58px;
   flex-shrink: 0;
 }
 
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
 }
 
 .logo-emoji {
-  font-size: 2rem;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+  font-size: 1.7rem;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.1));
 }
 
 #app-title {
-  font-size: 1.6rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #5c481a;
   text-shadow: 1px 1px 0px #fff;
 }
 
-/* モード切り替えの巨大トグル */
-#mode-selector {
-  display: flex;
-  background-color: rgba(255, 255, 255, 0.5);
-  padding: 5px;
-  border-radius: 50px;
-  border: 3px solid #f2bb3f;
-  gap: 5px;
-}
-
-.mode-btn {
-  border: none;
-  background: transparent;
-  padding: 9px 20px;
-  border-radius: 40px;
-  font-family: inherit;
-  font-weight: 900;
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  color: #7d632a;
-}
-
-.mode-btn .btn-icon { font-size: 1.6rem; }
-
-.mode-btn.active {
-  background: linear-gradient(180deg, #ffb347 0%, #ff8c00 100%);
-  color: #fff;
-  box-shadow: 0 5px 10px rgba(255, 140, 0, 0.3), inset 0 -3px 0 rgba(0,0,0,0.2);
-  transform: scale(1.05);
-}
-
-.mode-btn:active { transform: scale(0.95); }
-
 /* 右側アクションボタン */
 #action-buttons {
   display: flex;
-  gap: 12px;
+  gap: 10px;
+  align-items: center;
 }
 
 .action-btn {
   border: none;
   font-family: inherit;
   font-weight: 900;
-  font-size: 1.1rem;
-  padding: 9px 18px;
-  border-radius: 18px;
+  font-size: 1rem;
+  padding: 8px 16px;
+  border-radius: 16px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   transition: all 0.15s ease;
-  box-shadow: 0 5px 0 rgba(0,0,0,0.15);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
   color: white;
+  white-space: nowrap;
 }
 
-.action-btn .btn-icon { font-size: 1.4rem; }
+.action-btn .btn-icon { font-size: 1.2rem; }
 
 .action-btn:active {
   transform: translateY(4px);
   box-shadow: 0 1px 0 rgba(0,0,0,0.15);
 }
 
+.action-btn.undo {
+  background: linear-gradient(180deg, #dfe6e9 0%, #b2bec3 100%);
+  border-bottom: 3px solid #95a5a6;
+  color: #2d3436;
+}
+
+#undo-btn:disabled {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
 .action-btn.danger {
   background: linear-gradient(180deg, #ff6b6b 0%, #ee5253 100%);
-  border-bottom: 4px solid #cf3d3d;
+  border-bottom: 3px solid #cf3d3d;
 }
 
 .action-btn.success {
   background: linear-gradient(180deg, #1dd1a1 0%, #10ac84 100%);
-  border-bottom: 4px solid #0d8c6b;
-  transform: scale(1.07);
+  border-bottom: 3px solid #0d8c6b;
+  transform: scale(1.05);
 }
 
 .action-btn.success:active {
-  transform: translateY(4px) scale(1.03);
+  transform: translateY(4px) scale(1.02);
 }
 
 /* --------------------------------------------------------------------------
-   ツールバー（お絵かき／写真のオプション）
+   メインボディ（サイドバー ＋ キャンバス）
    -------------------------------------------------------------------------- */
-#tool-bar {
+#main-body {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   左サイドバー
+   -------------------------------------------------------------------------- */
+#sidebar {
+  width: 200px;
+  flex-shrink: 0;
   background-color: #fdfaf2;
-  border-bottom: 3px dashed #ebdcb9;
-  padding: 10px 20px;
-  min-height: 88px;
+  border-right: 3px solid #ebdcb9;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 10px;
+  overflow-y: auto;
+  z-index: 90;
+}
+
+/* --------------------------------------------------------------------------
+   モード切り替え（縦並び 3つ）
+   -------------------------------------------------------------------------- */
+#mode-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.mode-btn {
+  border: 3px solid transparent;
+  background: #f0e8d8;
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-family: inherit;
+  font-weight: 900;
+  font-size: 1.05rem;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  justify-content: center;
-  z-index: 90;
-  flex-shrink: 0;
+  gap: 8px;
+  width: 100%;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  color: #7d632a;
+}
+
+.mode-btn .btn-icon { font-size: 1.35rem; }
+
+.mode-btn.active {
+  background: linear-gradient(180deg, #ffb347 0%, #ff8c00 100%);
+  color: #fff;
+  border-color: #ff8c00;
+  box-shadow: 0 4px 8px rgba(255, 140, 0, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15);
+}
+
+/* 文字モードのアクティブ色 */
+#mode-text.active {
+  background: linear-gradient(180deg, #a29bfe 0%, #6c5ce7 100%);
+  border-color: #6c5ce7;
+  box-shadow: 0 4px 8px rgba(108, 92, 231, 0.3), inset 0 -3px 0 rgba(0,0,0,0.15);
+}
+
+.mode-btn:active { transform: scale(0.97); }
+
+/* --------------------------------------------------------------------------
+   ツールバー（サイドバー内、縦方向）
+   -------------------------------------------------------------------------- */
+#tool-bar {
+  flex: 1;
 }
 
 .tool-group {
   display: flex;
-  gap: 16px;
-  align-items: center;
-  width: 100%;
-  justify-content: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .tool-group.hidden { display: none !important; }
 
 .tool-section {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   background-color: #fff;
-  padding: 8px 16px;
-  border-radius: 18px;
-  border: 3px solid #ebdcb9;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid #ebdcb9;
 }
 
 .section-label {
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: #8c7a6b;
-  background-color: #faf6eb;
-  padding: 3px 10px;
-  border-radius: 10px;
-  white-space: nowrap;
+  font-weight: 700;
 }
 
-/* いろパレット */
+/* もじモード用のヒント文 */
+.tool-hint {
+  font-size: 0.9rem;
+  color: #8c7a6b;
+  font-weight: 700;
+  line-height: 1.7;
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* --------------------------------------------------------------------------
+   いろパレット
+   -------------------------------------------------------------------------- */
 .color-palette {
   display: flex;
-  gap: 16px;
+  flex-direction: row;
+  gap: 10px;
+  justify-content: center;
 }
 
 .color-btn {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), inset 0 2px 4px rgba(255,255,255,0.3);
   position: relative;
+  flex-shrink: 0;
 }
 
 .color-btn.active {
   transform: scale(1.15);
-  box-shadow: 0 0 0 5px #ffb347, 0 5px 0 rgba(0, 0, 0, 0.15);
+  box-shadow: 0 0 0 4px #ffb347, 0 4px 0 rgba(0, 0, 0, 0.15);
 }
 
 .color-btn.active::after {
   content: "✓";
   color: white;
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   text-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
 
-/* 消しゴムがアクティブな時の色ボタンを薄くする */
 .eraser-active .color-btn {
   opacity: 0.45;
 }
@@ -232,11 +281,15 @@ body {
 #color-red   { background-color: #ff3b30; }
 #color-blue  { background-color: #007aff; }
 
-/* ふとさパレット */
+/* --------------------------------------------------------------------------
+   ふとさパレット（3＋2の折り返しグリッド）
+   -------------------------------------------------------------------------- */
 .size-palette {
   display: flex;
-  gap: 10px;
-  align-items: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
 }
 
 .size-btn {
@@ -244,12 +297,13 @@ body {
   height: 52px;
   border: 3px solid #ebdcb9;
   background-color: #fdfdfd;
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  flex-shrink: 0;
 }
 
 .size-btn.active {
@@ -259,7 +313,6 @@ body {
   box-shadow: 0 4px 8px rgba(255, 179, 71, 0.2);
 }
 
-/* 丸のドットサイズ */
 .dot {
   background-color: #4a3f35;
   border-radius: 50%;
@@ -268,28 +321,31 @@ body {
 .size-1 { width:  6px; height:  6px; }
 .size-2 { width: 12px; height: 12px; }
 .size-3 { width: 22px; height: 22px; }
-.size-4 { width: 34px; height: 34px; }
-.size-5 { width: 44px; height: 44px; }
+.size-4 { width: 32px; height: 32px; }
+.size-5 { width: 40px; height: 40px; }
 
-/* 消しゴム／もどす ボタン */
+/* --------------------------------------------------------------------------
+   消しゴムボタン
+   -------------------------------------------------------------------------- */
 .tool-toggle-btn {
   border: 3px solid #ebdcb9;
   background-color: #fdfdfd;
   font-family: inherit;
   font-weight: 900;
-  font-size: 1.05rem;
-  padding: 8px 16px;
-  border-radius: 14px;
+  font-size: 1rem;
+  padding: 9px 14px;
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  width: 100%;
   transition: all 0.15s ease;
   color: #5c481a;
   box-shadow: 0 3px 0 rgba(0,0,0,0.1);
 }
 
-.tool-toggle-btn .btn-icon { font-size: 1.4rem; }
+.tool-toggle-btn .btn-icon { font-size: 1.3rem; }
 
 .tool-toggle-btn:active {
   transform: translateY(3px);
@@ -303,30 +359,30 @@ body {
   box-shadow: 0 0 0 3px rgba(255, 140, 0, 0.25), 0 3px 0 rgba(0,0,0,0.1);
 }
 
-/* もどすボタン：履歴なし時は薄く */
-#undo-btn:disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-/* しゃしん追加ボタン */
+/* --------------------------------------------------------------------------
+   しゃしん追加ボタン
+   -------------------------------------------------------------------------- */
 .big-add-btn {
   border: none;
   font-family: inherit;
   font-weight: 900;
-  font-size: 1.2rem;
-  padding: 9px 22px;
-  border-radius: 14px;
+  font-size: 1rem;
+  padding: 10px 14px;
+  border-radius: 12px;
   cursor: pointer;
   background: linear-gradient(180deg, #a8e6cf 0%, #56ab2f 100%);
   border-bottom: 4px solid #3c7d21;
   color: white;
   display: flex;
   align-items: center;
-  gap: 9px;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
   transition: all 0.1s ease;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.12);
 }
+
+.big-add-btn .btn-icon { font-size: 1.3rem; }
 
 .big-add-btn:active {
   transform: translateY(4px);
@@ -334,22 +390,27 @@ body {
   margin-bottom: 4px;
 }
 
-/* 写真選択時のオプションボタン */
+/* --------------------------------------------------------------------------
+   写真・テキスト共通アクションボタン
+   -------------------------------------------------------------------------- */
 .photo-action-btn {
   border: none;
   font-family: inherit;
   font-weight: 900;
-  font-size: 1.1rem;
-  padding: 9px 16px;
-  border-radius: 14px;
+  font-size: 0.9rem;
+  padding: 9px 12px;
+  border-radius: 12px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 7px;
+  width: 100%;
   transition: all 0.1s ease;
   color: white;
   box-shadow: 0 3px 0 rgba(0,0,0,0.12);
 }
+
+.photo-action-btn .btn-icon { font-size: 1.2rem; }
 
 .photo-action-btn:active {
   transform: translateY(3px);
@@ -358,146 +419,35 @@ body {
 
 .photo-action-btn.danger {
   background: linear-gradient(180deg, #ff6b6b 0%, #ee5253 100%);
-  border-bottom: 4px solid #cf3d3d;
+  border-bottom: 3px solid #cf3d3d;
 }
 
 .photo-action-btn.secondary {
   background: linear-gradient(180deg, #a0c4ff 0%, #4a90d9 100%);
-  border-bottom: 4px solid #2c6fad;
+  border-bottom: 3px solid #2c6fad;
 }
 
 /* --------------------------------------------------------------------------
-   メインキャンバス
-   -------------------------------------------------------------------------- */
-#canvas-area {
-  flex: 1;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background-color: #faf6eb;
-  min-height: 0; /* flex shrink のため必須 */
-}
-
-/* 絵カード（浮かび上がる白いカード） */
-#canvas-container {
-  width: 100%;
-  height: 100%;
-  max-width: 1024px;
-  max-height: 720px;
-  background-color: #ffffff;
-  border-radius: 28px;
-  box-shadow: 0 16px 40px rgba(74, 63, 53, 0.1);
-  border: 8px solid #fff;
-  position: relative;
-  overflow: hidden;
-}
-
-/* 写真レイヤー */
-#photo-layer {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 10;
-  /* overflow: visible にして画像が端に近づいた時クリップしない */
-}
-
-/* 手書きキャンバス */
-#drawing-canvas {
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 20;
-  cursor: crosshair;
-  display: block;
-  touch-action: none; /* iOS Safari のスクロール防止 */
-}
-
-/* 消しゴムモード時のカーソル */
-#drawing-canvas.eraser-cursor {
-  cursor: cell;
-}
-
-/* --------------------------------------------------------------------------
-   ドラッグ・編集可能な画像要素
-   -------------------------------------------------------------------------- */
-.draggable-image {
-  position: absolute;
-  cursor: grab;
-  user-select: none;
-  -webkit-user-drag: none;
-  transform-origin: center center;
-}
-
-.draggable-image:active { cursor: grabbing; }
-
-/* 中の画像本体 */
-.draggable-image img {
-  width: 100%;
-  height: 100%;
-  display: block;
-  pointer-events: none;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-
-/* 選択状態の枠線 */
-.draggable-image.selected {
-  outline: 4px dashed #ff8c00;
-  outline-offset: 4px;
-  z-index: 1000 !important;
-}
-
-.draggable-image.selected img {
-  box-shadow: 0 10px 25px rgba(255, 140, 0, 0.3);
-}
-
-/* 四隅の拡大縮小ハンドル */
-.draggable-image .resize-handle {
-  width: 36px;
-  height: 36px;
-  background-color: #ffffff;
-  border: 4px solid #ff8c00;
-  border-radius: 50%;
-  position: absolute;
-  z-index: 1010;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  display: none;
-  touch-action: none;
-}
-
-.draggable-image.selected .resize-handle { display: block; }
-
-.resize-handle.tl { top: -18px; left: -18px;  cursor: nwse-resize; }
-.resize-handle.tr { top: -18px; right: -18px;  cursor: nesw-resize; }
-.resize-handle.bl { bottom: -18px; left: -18px; cursor: nesw-resize; }
-.resize-handle.br { bottom: -18px; right: -18px; cursor: nwse-resize; }
-
-/* --------------------------------------------------------------------------
-   フッター（ステータス表示）
+   ステータス表示（サイドバー下部）
    -------------------------------------------------------------------------- */
 #status-footer {
-  background-color: #fff;
-  padding: 8px 16px;
-  border-top: 3px solid #ebdcb9;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 46px;
-  z-index: 80;
-  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 2px solid #ebdcb9;
 }
 
 #status-indicator {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
   font-weight: 900;
-  padding: 5px 20px;
-  border-radius: 28px;
+  padding: 7px 10px;
+  border-radius: 20px;
   transition: all 0.3s ease;
+  width: 100%;
+  text-align: center;
 }
 
 #status-indicator.draw-mode {
@@ -518,8 +468,196 @@ body {
   border: 2px solid #a5d6a7;
 }
 
+#status-indicator.text-mode {
+  background-color: #ede7f6;
+  color: #4527a0;
+  border: 2px solid #b39ddb;
+}
+
 /* --------------------------------------------------------------------------
-   モーダル（確認ダイアログ）
+   メインキャンバスエリア
+   -------------------------------------------------------------------------- */
+#canvas-area {
+  flex: 1;
+  min-width: 0;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #faf6eb;
+}
+
+#canvas-container {
+  width: 100%;
+  height: 100%;
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 14px 36px rgba(74, 63, 53, 0.12);
+  border: 6px solid #fff;
+  position: relative;
+  overflow: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   写真レイヤー ＆ 手書きキャンバス ＆ テキストレイヤー
+   -------------------------------------------------------------------------- */
+#photo-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 10;
+}
+
+#drawing-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 20;
+  cursor: crosshair;
+  display: block;
+  touch-action: none;
+}
+
+#drawing-canvas.eraser-cursor {
+  cursor: cell;
+}
+
+/* テキストレイヤー（最前面） */
+#text-layer {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 30;
+  pointer-events: none; /* デフォルトは非インタラクティブ */
+}
+
+/* 文字モード時はインタラクティブにする */
+#text-layer.interactive {
+  pointer-events: auto;
+}
+
+/* --------------------------------------------------------------------------
+   テキストボックス
+   -------------------------------------------------------------------------- */
+.text-box {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.96);
+  border: 3px solid #dfe6e9;
+  border-radius: 14px;
+  min-width: 90px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+}
+
+.text-box.selected {
+  border-color: #6c5ce7;
+  box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.2), 0 4px 14px rgba(0,0,0,0.15);
+}
+
+/* ドラッグハンドル（上部バー） */
+.text-drag-handle {
+  background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%);
+  padding: 5px 10px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 900;
+  cursor: grab;
+  touch-action: none;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  flex-shrink: 0;
+}
+
+.text-drag-handle:active {
+  cursor: grabbing;
+  background: linear-gradient(135deg, #6c5ce7 0%, #5649c0 100%);
+}
+
+/* テキスト入力エリア */
+.text-content {
+  font-family: 'Zen Maru Gothic', -apple-system, sans-serif;
+  font-weight: 900;
+  font-size: 32px;
+  color: #1a1a1a;
+  outline: none;
+  padding: 8px 14px;
+  min-height: 52px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: text;
+  line-height: 1.3;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.text-content:empty::before {
+  content: 'もじ';
+  color: #b2bec3;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   ドラッグ・編集可能な画像要素
+   -------------------------------------------------------------------------- */
+.draggable-image {
+  position: absolute;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: center center;
+}
+
+.draggable-image:active { cursor: grabbing; }
+
+.draggable-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: none;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.draggable-image.selected {
+  outline: 4px dashed #ff8c00;
+  outline-offset: 4px;
+  z-index: 1000 !important;
+}
+
+.draggable-image.selected img {
+  box-shadow: 0 10px 25px rgba(255, 140, 0, 0.3);
+}
+
+/* 四隅リサイズハンドル */
+.draggable-image .resize-handle {
+  width: 36px;
+  height: 36px;
+  background-color: #ffffff;
+  border: 4px solid #ff8c00;
+  border-radius: 50%;
+  position: absolute;
+  z-index: 1010;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  display: none;
+  touch-action: none;
+}
+
+.draggable-image.selected .resize-handle { display: block; }
+
+.resize-handle.tl { top: -18px; left: -18px;   cursor: nwse-resize; }
+.resize-handle.tr { top: -18px; right: -18px;   cursor: nesw-resize; }
+.resize-handle.bl { bottom: -18px; left: -18px; cursor: nesw-resize; }
+.resize-handle.br { bottom: -18px; right: -18px; cursor: nwse-resize; }
+
+/* --------------------------------------------------------------------------
+   モーダル
    -------------------------------------------------------------------------- */
 .modal-overlay {
   position: fixed;
@@ -604,7 +742,7 @@ body {
    -------------------------------------------------------------------------- */
 #save-toast {
   position: fixed;
-  bottom: 80px;
+  bottom: 30px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: linear-gradient(135deg, #1dd1a1, #10ac84);
